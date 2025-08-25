@@ -2,12 +2,12 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 require("dotenv").config();
 
-const data = JSON.parse(fs.readFileSync("./wilayahLengkap.json", "utf-8"));
+const data = JSON.parse(fs.readFileSync("./wilayahLengkapClean.json", "utf-8"));
 
 // Skema fleksibel untuk struktur hierarki lengkap
 const wilayahSchema = new mongoose.Schema({}, { strict: false });
 
-// 👉 Ubah nama koleksi di sini
+// 👉 Ubah nama koleksi
 const KodeWilayah = mongoose.model("KodeWilayah", wilayahSchema, "kode_wilayah");
 
 async function seed() {

@@ -11,7 +11,7 @@ export default function Index() {
     {
       icon: <Settings className="h-8 w-8" />,
       title: "Pendaftaran Digital",
-      description: "Sistem pendaftaran sumur digital yang efisien dan terintegrasi dengan baik"
+      description: "Sistem pendaftaran sumur digital yang efisien dan terintegrasi"
     },
     {
       icon: <MapPin className="h-8 w-8" />,
@@ -61,7 +61,7 @@ export default function Index() {
               />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Tim Air Tanah</h1>
-                <p className="text-xs text-gray-500">Sistem Pendaftaran Sumur</p>
+                <p className="text-xs text-gray-500">Registrasi Sumur</p>
               </div>
             </div>
             <nav className="hidden md:flex items-center gap-6">
@@ -89,18 +89,18 @@ export default function Index() {
           <div className="max-w-4xl mx-auto text-center">
             <Badge variant="outline" className="mb-6 px-4 py-2 bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 text-blue-700 shadow-sm">
               <CheckCircle className="h-4 w-4 mr-2" />
-              Platform Resmi Pemerintah
+              Platform Resmi PATGTL
             </Badge>
 
             <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 bg-clip-text text-transparent mb-8 leading-tight">
-              Pendaftaran Sumur
+              Registrasi Sumur
               <span className="block bg-gradient-to-r from-blue-600 via-blue-500 to-green-600 bg-clip-text text-transparent"
                     style={{animation: 'float 3s ease-in-out infinite'}}>Air Tanah</span>
             </h1>
 
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Platform modern berbasis web untuk pendaftaran dan pengelolaan sumur air tanah
-              yang mudah, aman, dan sesuai dengan standar pemerintah.
+              Platform berbasis web untuk pendaftaran dan pengelolaan sumur air tanah
+              yang mudah, aman, dan terintegrasi.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
@@ -114,7 +114,7 @@ export default function Index() {
               <Link to="/dashboard">
                 <Button variant="outline" size="lg" className="h-14 px-8 text-lg border-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:border-blue-300 transition-all duration-300">
                   <BarChart3 className="h-5 w-5 mr-3" />
-                  Lihat Dasbor
+                  Lihat Dasboard
                 </Button>
               </Link>
             </div>
@@ -130,7 +130,7 @@ export default function Index() {
               Solusi Lengkap Pengelolaan Sumur
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Platform web canggih yang menyediakan layanan pendaftaran, pemantauan, dan
+              Platform web yang menyediakan layanan pendaftaran, pemantauan, dan
               pengelolaan data sumur air tanah secara menyeluruh.
             </p>
           </div>

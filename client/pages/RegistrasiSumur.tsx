@@ -301,19 +301,31 @@ export default function RegistrasiSumur() {
 
                   {useManualInput ? (
                     <div className="grid md:grid-cols-2 gap-4">
-                      {["provinsi", "kabupaten", "kecamatan", "desa"].map((field) => (
-                        <div key={field}>
-                          <label className="block text-sm font-medium mb-2">{field}</label>
-                          <input
-                            name={field}
-                            placeholder={`Masukkan ${field}`}
-                            value={selected[field]}
-                            onChange={handleChange}
-                            required
-                            className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                          />
-                        </div>
-                      ))}
+                      {["provinsi", "kabupaten", "kecamatan", "desa"].map((field) => {
+                        // Mapping placeholder
+                        const placeholders = {
+                          provinsi: "Masukkan Nama Provinsi",
+                          kabupaten: "Masukkan Nama Kabupaten/Kota",
+                          kecamatan: "Masukkan Nama Kecamatan",
+                          desa: "Masukkan Nama Desa/Kelurahan"
+                        };
+
+                        return (
+                          <div key={field}>
+                            <label className="block text-sm font-medium mb-2 capitalize">
+                              {field} <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              name={field}
+                              placeholder={placeholders[field] || `Masukkan ${field}`}
+                              value={selected[field]}
+                              onChange={handleChange}
+                              required
+                              className="w-full px-3 py-2 border border-input rounded-md bg-background placeholder-gray-400"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="grid md:grid-cols-2 gap-4">
@@ -329,7 +341,7 @@ export default function RegistrasiSumur() {
                       <div>
                         <label className="block text-sm font-medium mb-2">Kabupaten/Kota</label>
                         <select name="kabupaten" value={selected.kabupaten} onChange={handleChange} required className="w-full px-3 py-2 border rounded-md">
-                          <option value="">-- Pilih Kabupaten --</option>
+                          <option value="">-- Pilih Kabupaten/Kota --</option>
                           {kabupatenList.map((k) => (
                             <option key={k.kode} value={k.kode}>{k.nama}</option>
                           ))}
