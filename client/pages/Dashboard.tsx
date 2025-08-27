@@ -3,13 +3,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Droplets, ArrowLeft, BarChart3, Users, MapPin, Calendar, Search, Filter, Download, Trash2, Edit, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { Droplets, ArrowLeft, BarChart3, Users, MapPin, Calendar, Search, Filter, Download, Trash2, Edit, X, LogOut, User } from "lucide-react";
 //console.log("📦 ENV:", import.meta.env); // Lihat semua variabel env
 //console.log("🔑 VITE_API_URL is:", import.meta.env.VITE_API_URL);
 //console.log("📦 ENV ALL:", import.meta.env);
 //console.log("🔑 VITE_API_URL:", import.meta.env.VITE_API_URL);
 
 export default function Dashboard() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();  
+  const handleLogout = () => {
+    logout();
+    navigate("/login"); // redirect ke login setelah logout
+  };
   const [sumurData, setSumurData] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -80,7 +88,7 @@ useEffect(() => {
   const handleEdit = (item) => {
     setSelectedItem(item);
     setEditFormData({
-    nama_perusahaan: item.nama_perusahaan === "-" ? "" : item.  nama_perusahaan,
+    nama_perusahaan: item.nama_perusahaan === "-" ? "" : item.nama_perusahaan,
     provinsi: item.provinsi === "-" ? "" : item.provinsi,
     kabupaten: item.kabupaten === "-" ? "" : item.kabupaten,
     kecamatan: item.kecamatan === "-" ? "" : item.kecamatan,
@@ -91,14 +99,41 @@ useEffect(() => {
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = () => {
-    setSumurData(prev => prev.map(item =>
-      item.id === selectedItem.id
-        ? { ...item, ...editFormData, jenis: parseInt(editFormData.jenis) }
-        : item
-    ));
-    setShowEditModal(false);
-    setSelectedItem(null);
+  const handleSaveEdit = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/registrasi/${selectedItem.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          jenis: parseInt(editFormData.jenis), // pastikan integer
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Gagal update data");
+      }
+
+      const updated = await res.json();
+
+      // Update data di state
+      setSumurData(prev =>
+        prev.map(item =>
+          item.id === selectedItem.id
+            ? { ...item, ...editFormData, jenis: parseInt(editFormData.jenis) }
+            : item
+        )
+      );
+
+      setShowEditModal(false);
+      setSelectedItem(null);
+    } catch (err) {
+      console.error("Gagal update data:", err);
+      alert("Gagal menyimpan perubahan: " + err.message);
+    }
   };
 
   const handleDelete = (item) => {
@@ -124,20 +159,39 @@ const confirmDelete = async () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Droplets className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground"><p>Tim Air Tanah</p></span>
+            <span className="text-xl font-bold text-foreground">Tim Air Tanah</span>
           </div>
-          <Link to="/">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Kembali ke Beranda
-            </Button>
-          </Link>
+
+          <div className="flex items-center gap-4">
+            {/* User Info */}
+            <div className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <div className="text-right">
+                <div className="font-medium">{user?.name}</div>
+                <div className="text-xs text-muted-foreground">{user?.email}</div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Link to="/">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Beranda
+                </Button>
+              </Link>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Keluar
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
 

@@ -10,6 +10,12 @@ const SumurSchema = new mongoose.Schema({
   kecamatan: String,
   desa: String,
   tanggalRegistrasi: { type: Date, default: Date.now },
+  id_perusahaan: {
+    type: String,
+    required: true,
+    unique: true, // id_perusahaan unik
+  },
+  nomor_sumur: String,
   nama_perusahaan: String,
   dataLain: mongoose.Schema.Types.Mixed, // Untuk simpan field tambahan dari form
   status: {

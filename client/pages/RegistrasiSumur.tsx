@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Droplets,
   ArrowLeft,
@@ -10,7 +12,8 @@ import {
   FileText,
   RefreshCw,
   Edit,
-  Database
+  Database,
+  Building2
 } from "lucide-react";
 
 const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -23,6 +26,11 @@ export default function RegistrasiSumur() {
   const [desaList, setDesaList] = useState([]);
 
   const [selected, setSelected] = useState({
+    // Company data
+    id_perusahaan: "",
+    nama_perusahaan: "",
+    nomor_sumur: "",
+    // Regional data
     provinsi: "",
     kabupaten: "",
     kecamatan: "",
@@ -31,12 +39,12 @@ export default function RegistrasiSumur() {
     kodeWilayah: ""
   });
 
-  //suggestion
+  // Suggestion for manual input
   const [inputManual, setInputManual] = useState({
-  provinsi: "",
-  kabupaten: "",
-  kecamatan: "",
-  desa: ""
+    provinsi: "",
+    kabupaten: "",
+    kecamatan: "",
+    desa: ""
   });
 
   const [suggestions, setSuggestions] = useState({
@@ -129,77 +137,124 @@ export default function RegistrasiSumur() {
     setSelected({ ...selected, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setRegSumur("");
-    setError("");
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    if (
-      useManualInput &&
-      (!selected.provinsi || !selected.kabupaten || !selected.kecamatan || !selected.desa || selected.kodeJenis === "")
-    ) {
-      setError("Mohon lengkapi data wilayah dan jenis sumur.");
-      setLoading(false);
-      return;
-    }
+  // Validasi data perusahaan
+  if (!selected.id_perusahaan || !selected.nama_perusahaan || !selected.nomor_sumur) {
+    setError("Mohon lengkapi data perusahaan (ID Perusahaan, Nama Perusahaan, dan Nomor Sumur).");
+    setLoading(false);
+    return;
+  }
 
-    if (!useManualInput && (!selected.kodeWilayah || selected.kodeJenis === "")) {
-      setError("Mohon lengkapi data wilayah dan jenis sumur.");
-      setLoading(false);
-      return;
-    }
+  // Validasi wilayah
+  if (
+    useManualInput &&
+    (!selected.provinsi || !selected.kabupaten || !selected.kecamatan || !selected.desa || selected.kodeJenis === "")
+  ) {
+    setError("Mohon lengkapi data wilayah dan jenis sumur.");
+    setLoading(false);
+    return;
+  }
 
-    try {
-      const endpoint = useManualInput ? "/registrasi/nama-fuzzy" : "/registrasi";
+  if (!useManualInput && (!selected.kodeWilayah || selected.kodeJenis === "")) {
+    setError("Mohon lengkapi data wilayah dan jenis sumur.");
+    setLoading(false);
+    return;
+  }
 
-      const payload = useManualInput
-        ? {
+  try {
+    const endpoint = useManualInput ? "/registrasi/nama-fuzzy" : "/registrasi";
+
+    const payload = useManualInput
+      ? {
+          id_perusahaan: selected.id_perusahaan,
+          nama_perusahaan: selected.nama_perusahaan,
+          nomor_sumur: selected.nomor_sumur,
+          provinsi: selected.provinsi,
+          kabupaten: selected.kabupaten,
+          kecamatan: selected.kecamatan,
+          desa: selected.desa,
+          jenis: parseInt(selected.kodeJenis)
+        }
+      : {
+          id_perusahaan: selected.id_perusahaan,
+          nama_perusahaan: selected.nama_perusahaan,
+          nomor_sumur: selected.nomor_sumur,
+          kodeWilayah: selected.kodeWilayah,
+          jenis: selected.kodeJenis,
+          dataLain: {
             provinsi: selected.provinsi,
             kabupaten: selected.kabupaten,
             kecamatan: selected.kecamatan,
-            desa: selected.desa,
-            jenis: parseInt(selected.kodeJenis)
+            desa: selected.desa
           }
-        : {
-            kodeWilayah: selected.kodeWilayah,
-            jenis: selected.kodeJenis,
-            dataLain: {
-              provinsi: selected.provinsi,
-              kabupaten: selected.kabupaten,
-              kecamatan: selected.kecamatan,
-              desa: selected.desa
-            }
-          };
+        };
 
-      const res = await fetch(`${apiUrl}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+    const res = await fetch(`${apiUrl}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Terjadi kesalahan");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Terjadi kesalahan");
 
-      if (data.nomorRegistrasi) {
-        setRegSumur(
-          `✅ ${data.nomorRegistrasi} (${data.wilayah?.desa}, ${data.wilayah?.kecamatan}, ${data.wilayah?.kabupaten}, ${data.wilayah?.provinsi})`
-        );
+    if (data.nomorRegistrasi) {
+      // Simpan hasil registrasi
+      setRegSumur(
+        `✅ ${data.nomorRegistrasi} (${selected.nama_perusahaan} - ${selected.nomor_sumur}) - ${data.wilayah?.desa}, ${data.wilayah?.kecamatan}, ${data.wilayah?.kabupaten}, ${data.wilayah?.provinsi}`
+      );
+
+      // Reset form sesuai mode input
+      if (useManualInput) {
+        setSelected({
+          id_perusahaan: "",
+          nama_perusahaan: "",
+          nomor_sumur: "",
+          provinsi: "",
+          kabupaten: "",
+          kecamatan: "",
+          desa: "",
+          kodeJenis: "",
+          kodeWilayah: ""
+        });
       } else {
-        setError("Registrasi berhasil tapi nomor tidak ditemukan.");
+        setSelected({
+          id_perusahaan: "",
+          nama_perusahaan: "",
+          nomor_sumur: "",
+          provinsi: "",
+          kabupaten: "",
+          kecamatan: "",
+          desa: "",
+          kodeJenis: "",
+          kodeWilayah: ""
+        });
+        setKabupatenList([]);
+        setKecamatanList([]);
+        setDesaList([]);
       }
-
-    } catch (err) {
-      console.error("Error submitting registration:", err);
-      setError(err.message || "Terjadi kesalahan saat mengirim data.");
-    } finally {
-      setLoading(false);
+    } else {
+      setError("Registrasi berhasil tapi nomor tidak ditemukan.");
     }
-  };
+  } catch (err) {
+    console.error("Error submitting registration:", err);
+    setError(err.message || "Terjadi kesalahan saat mengirim data.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const toggleInputMode = () => {
     setUseManualInput(!useManualInput);
     setSelected({
+      id_perusahaan: selected.id_perusahaan, // Keep company data
+      nama_perusahaan: selected.nama_perusahaan,
+      nomor_sumur: selected.nomor_sumur,
       provinsi: "",
       kabupaten: "",
       kecamatan: "",
@@ -214,23 +269,23 @@ export default function RegistrasiSumur() {
     setError("");
   };
 
-    //suggestion
-    const fetchSuggestions = async () => {
-  try {
-    const res = await fetch("http://localhost:5000/api/registrasi/saran-wilayah", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(inputManual)
-    });
+  // Suggestion function
+  const fetchSuggestions = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/registrasi/saran-wilayah", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(inputManual)
+      });
 
-    const data = await res.json();
-    setSuggestions(data.saran || {});
-  } catch (err) {
-    console.error("Gagal ambil saran wilayah:", err);
-  }
-};
+      const data = await res.json();
+      setSuggestions(data.saran || {});
+    } catch (err) {
+      console.error("Gagal ambil saran wilayah:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -293,6 +348,59 @@ export default function RegistrasiSumur() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Company Information Section */}
+                <div className="border rounded-lg p-4 bg-gray-50/50">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    Data Perusahaan
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="id_perusahaan" className="text-sm font-medium">
+                        ID Perusahaan <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="id_perusahaan"
+                        name="id_perusahaan"
+                        placeholder="Masukkan ID Perusahaan"
+                        value={selected.id_perusahaan}
+                        onChange={handleChange}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="nama_perusahaan" className="text-sm font-medium">
+                        Nama Perusahaan <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="nama_perusahaan"
+                        name="nama_perusahaan"
+                        placeholder="Masukkan Nama Perusahaan"
+                        value={selected.nama_perusahaan}
+                        onChange={handleChange}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="nomor_sumur" className="text-sm font-medium">
+                        Nomor Sumur <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="nomor_sumur"
+                        name="nomor_sumur"
+                        placeholder="Contoh: SB-1, SG-1, SB-2"
+                        value={selected.nomor_sumur}
+                        onChange={handleChange}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Regional Data Section */}
                 <div className="border rounded-lg p-4 bg-gray-50/50">
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-primary" />
@@ -302,7 +410,6 @@ export default function RegistrasiSumur() {
                   {useManualInput ? (
                     <div className="grid md:grid-cols-2 gap-4">
                       {["provinsi", "kabupaten", "kecamatan", "desa"].map((field) => {
-                        // Mapping placeholder
                         const placeholders = {
                           provinsi: "Masukkan Nama Provinsi",
                           kabupaten: "Masukkan Nama Kabupaten/Kota",
@@ -369,6 +476,7 @@ export default function RegistrasiSumur() {
                   )}
                 </div>
 
+                {/* Well Type Section */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     <Droplets className="h-4 w-4 inline mr-1" />

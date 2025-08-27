@@ -1,11 +1,65 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Droplets, ArrowLeft, MapPin, Calendar, Search, Download, Eye, BarChart3, X, ExternalLink, FileText, Edit, CheckCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Droplets, ArrowLeft, MapPin, Calendar, Search, Download, Eye, BarChart3, X, ExternalLink, FileText, Edit, CheckCircle, LogOut, User } from "lucide-react";
 
 export default function DataSumur() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  const handleExportData = () => {
+    // Create export data based on user's access
+    const exportData = filteredData.map(item => ({
+      no_registrasi: item.reg_sumur,
+      nama_perusahaan: item.nama_perusahaan,
+      lokasi: `${item.desa}, ${item.kecamatan}, ${item.kabupaten}, ${item.provinsi}`,
+      jenis_sumur: item.jenis,
+      kedalaman: item.kedalaman,
+      diameter: item.diameter,
+      kapasitas: item.kapasitas,
+      status: item.status,
+      tanggal_registrasi: item.tanggal,
+      koordinat: item.koordinat,
+      user_export: user?.name,
+      waktu_export: new Date().toISOString()
+    }));
+
+    // Convert to CSV
+    const csvContent = [
+      // Headers
+      [
+        'No Registrasi', 'Nama Perusahaan', 'Lokasi', 'Jenis Sumur', 'Kedalaman',
+        'Diameter', 'Kapasitas', 'Status', 'Tanggal Registrasi', 'Koordinat',
+        'User Export', 'Waktu Export'
+      ].join(','),
+      // Data rows
+      ...exportData.map(row => [
+        row.no_registrasi, `"${row.nama_perusahaan}"`, `"${row.lokasi}"`, row.jenis_sumur,
+        row.kedalaman, row.diameter, row.kapasitas, row.status, row.tanggal_registrasi,
+        row.koordinat, `"${row.user_export}"`, row.waktu_export
+      ].join(','))
+    ].join('\n');
+
+    // Download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `data_sumur_${user?.name?.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProvinsi, setSelectedProvinsi] = useState("all");
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -69,7 +123,7 @@ export default function DataSumur() {
       alamat_lengkap: "Jl. Setiabudhi No. 456, Gegerkalong, Sukasari, Kota Bandung, Jawa Barat",
       tanggal_terbit: "",
       masa_berlaku: "",
-      debit_diizinkan: ""
+      debit_diizinkan: "",
     },
     {
       id: "3",
@@ -117,7 +171,7 @@ export default function DataSumur() {
       alamat_lengkap: "Jl. Gubeng Raya No. 321, Gubeng, Kota Surabaya, Jawa Timur",
       tanggal_terbit: "",
       masa_berlaku: "",
-      debit_diizinkan: ""
+      debit_diizinkan: "",
     }
   ]);
 
@@ -193,14 +247,33 @@ export default function DataSumur() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Droplets className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground"><p>Tim Air Tanah</p></span>
+            <span className="text-xl font-bold text-foreground">Tim Air Tanah</span>
           </div>
-          <Link to="/">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Kembali ke Beranda
-            </Button>
-          </Link>
+
+          <div className="flex items-center gap-4">
+            {/* User Info */}
+            <div className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <div className="text-right">
+                <div className="font-medium">{user?.name}</div>
+                <div className="text-xs text-muted-foreground">{user?.email}</div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Link to="/">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Beranda
+                </Button>
+              </Link>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Keluar
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -277,9 +350,9 @@ export default function DataSumur() {
                     <option key={provinsi} value={provinsi}>{provinsi}</option>
                   ))}
                 </select>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2" onClick={handleExportData}>
                   <Download className="h-4 w-4" />
-                  Export
+                  Export Data
                 </Button>
               </div>
             </div>

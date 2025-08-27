@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const registrasiController = require('../controllers/registrasiController');
-
 const { getAllSumur } = require('../controllers/registrasiController');
 
 router.post('/', registrasiController.registrasiSumur);

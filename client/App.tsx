@@ -6,7 +6,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ui/ProtectedRoute";
 import Index from "./pages/Index";
+import LoginPage from "./pages/LoginPage";
 import RegistrasiSumur from "./pages/RegistrasiSumur";
 import Dashboard from "./pages/Dashboard";
 import DataSumur from "./pages/DataSumur";
@@ -19,16 +22,43 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/registrasi-sumur" element={<RegistrasiSumur />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/data-sumur" element={<DataSumur />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<LoginPage />} />
+
+
+            {/* Protected Routes */}
+            <Route 
+            path="/registrasi-sumur" 
+            element={<ProtectedRoute>
+                        <RegistrasiSumur />
+                      </ProtectedRoute>} />
+                      
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/data-sumur"
+              element={
+                <ProtectedRoute>
+                  <DataSumur />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

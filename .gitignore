@@ -27,3 +27,8 @@ dist-ssr
 
 # Environment
 .env
+
+# backend credentials
+backend/credentials.json
+registrasi-sumur-*.json
+backend/.env

@@ -5,6 +5,16 @@ const { findBestMatchHierarki } = require("../utils/fuzzyHelper");
 const { getSuggestions } = require('../utils/fuzzySuggest');
 const { flattenWilayahToDesaList } = require("../utils/fuzzyFallback");
 
+//google api
+const { google } = require("googleapis");
+const path = require("path");
+const {
+  appendToGoogleSheets,
+  updateGoogleSheetsById,
+  deleteGoogleSheetsById
+} = require("../utils/googleSheets");
+
+
 // Fungsi bantu: pad angka ke 3 digit
 const padUrutan = (angka) => angka.toString().padStart(3, '0');
 
@@ -24,9 +34,18 @@ const findKelurahan = async (kodeWilayah) => {
 // POST /registrasi
 exports.registrasiSumur = async (req, res) => {
   try {
-    const { kodeWilayah, jenis } = req.body;
+    const { kodeWilayah, jenis, nama_perusahaan, id_perusahaan, nomor_sumur } = req.body;
+
     if (!kodeWilayah || jenis === undefined || jenis === null) {
       return res.status(400).json({ error: "kodeWilayah dan jenis wajib diisi" });
+    }
+
+    // Cek duplikat id_perusahaan
+    if (id_perusahaan) {
+      const exists = await Sumur.findOne({ id_perusahaan });
+      if (exists) {
+        return res.status(409).json({ message: "❌ id_perusahaan sudah terdaftar" });
+      }
     }
 
     const [prov, kota, kec, desa] = kodeWilayah.split('.');
@@ -68,10 +87,21 @@ exports.registrasiSumur = async (req, res) => {
       provinsi: wilayah.provinsi,
       kabupaten: wilayah.kabupaten,
       kecamatan: wilayah.kecamatan,
-      desa: wilayah.desa
+      desa: wilayah.desa,
+      nama_perusahaan,
+      id_perusahaan,
+      nomor_sumur
     });
 
     await newSumur.save();
+    
+    // Tambah juga ke Google Sheets
+    try {
+      await appendToGoogleSheets(newSumur.toObject());
+    } catch (err) {
+      console.error("❌ Gagal simpan ke Google Sheets:", err.message);
+    }
+
 
     res.status(201).json({
       nomorRegistrasi,
@@ -86,36 +116,40 @@ exports.registrasiSumur = async (req, res) => {
 
 
 // Registrasi manual sumur
+// Registrasi manual sumur dengan fuzzy + Google Sheets
 exports.registrasiNamaFuzzy = async (req, res) => {
-  let { provinsi, kabupaten, kecamatan, desa, jenis } = req.body;
+  let { provinsi, kabupaten, kecamatan, desa, jenis, nama_perusahaan, id_perusahaan, nomor_sumur } = req.body;
   jenis = parseInt(jenis);
 
   if (![0, 1, 2].includes(jenis)) {
     return res.status(400).json({ error: "Jenis sumur tidak valid" });
   }
 
+  if (!provinsi || !kabupaten || !kecamatan || !desa) {
+    return res.status(400).json({ error: "Semua nama wilayah harus diisi" });
+  }
+  
   try {
-    if (!provinsi || !kabupaten || !kecamatan || !desa) {
-      return res.status(400).json({ error: "Semua nama wilayah harus diisi" });
+    // 🔎 Cek duplikat id_perusahaan
+    if (id_perusahaan) {
+      const exists = await Sumur.findOne({ id_perusahaan });
+      if (exists) return res.status(409).json({ message: "❌ id_perusahaan sudah terdaftar" });
     }
 
+    // 🔎 Ambil semua wilayah
     const wilayahList = await Wilayah.find().lean();
     const wilayahMap = {};
     for (const prov of wilayahList) {
       wilayahMap[prov.kode] = prov;
     }
 
-    // 🔹 1. Coba pakai fuzzy hierarki dulu
-    const hasil = findBestMatchHierarki({ provinsi, kabupaten, kecamatan, desa }, wilayahMap);
+    // 1️⃣ Coba fuzzy hierarki
+    let hasil = findBestMatchHierarki({ provinsi, kabupaten, kecamatan, desa }, wilayahMap);
 
-    // 🔹 2. Jika gagal lengkap, fallback ke Fuse.js
+    // 2️⃣ Fallback Fuse.js jika tidak lengkap
     if (!hasil?.desa) {
       const desaList = flattenWilayahToDesaList(wilayahMap);
-      const fuse = new Fuse(desaList, {
-        keys: ["full"],
-        threshold: 0.4
-      });
-
+      const fuse = new Fuse(desaList, { keys: ["full"], threshold: 0.4 });
       const query = `${desa} ${kecamatan} ${kabupaten} ${provinsi}`.toLowerCase();
       const results = fuse.search(query);
 
@@ -124,15 +158,18 @@ exports.registrasiNamaFuzzy = async (req, res) => {
       }
 
       const best = results[0].item;
-
-      hasil.provinsi = { nama: best.provinsi };
-      hasil.kabupaten = { nama: best.kabupaten };
-      hasil.kecamatan = { nama: best.kecamatan };
-      hasil.desa = { nama: best.nama, kode: best.kode };
+      hasil = {
+        provinsi: { nama: best.provinsi },
+        kabupaten: { nama: best.kabupaten },
+        kecamatan: { nama: best.kecamatan },
+        desa: { nama: best.nama, kode: best.kode }
+      };
     }
 
     const kodeWilayah = hasil.desa.kode;
     const prefix = `${kodeWilayah}.${jenis}`;
+
+    // Cari nomor terakhir
     const existing = await Sumur.find({ nomorRegistrasi: { $regex: `^${prefix}` } })
       .sort({ nomorRegistrasi: -1 })
       .limit(1);
@@ -145,6 +182,7 @@ exports.registrasiNamaFuzzy = async (req, res) => {
 
     const nomorBaru = `${prefix}.${urut.toString().padStart(3, "0")}`;
 
+    // Simpan ke MongoDB
     const simpan = new Sumur({
       nomorRegistrasi: nomorBaru,
       kodeWilayah,
@@ -152,21 +190,33 @@ exports.registrasiNamaFuzzy = async (req, res) => {
       provinsi: hasil.provinsi.nama,
       kabupaten: hasil.kabupaten.nama,
       kecamatan: hasil.kecamatan.nama,
-      desa: hasil.desa.nama
+      desa: hasil.desa.nama,
+      nama_perusahaan,
+      id_perusahaan,
+      nomor_sumur
     });
     await simpan.save();
 
-    console.log("  nomorRegistrasi:", nomorBaru);console.log("✅ Registrasi fuzzy berhasil:", nomorBaru);
-    console.log("  kodeWilayah:", kodeWilayah);
-    console.log("  jenis:", jenis);
+    // Tambah ke Google Sheets (gunakan appendToGoogleSheets konsisten)
+    try {
+      await appendToGoogleSheets(simpan.toObject());
+    } catch (err) {
+      console.error("❌ Gagal simpan ke Google Sheets:", err.message);
+    }
 
-    res.json({
+
+    console.log("✅ Registrasi fuzzy berhasil:", nomorBaru);
+
+    res.status(201).json({
       nomorRegistrasi: nomorBaru,
       wilayah: {
         provinsi: hasil.provinsi.nama,
         kabupaten: hasil.kabupaten.nama,
         kecamatan: hasil.kecamatan.nama,
-        desa: hasil.desa.nama
+        desa: hasil.desa.nama,
+        nama_perusahaan,
+        id_perusahaan,
+        nomor_sumur
       }
     });
 
@@ -174,7 +224,9 @@ exports.registrasiNamaFuzzy = async (req, res) => {
     console.error("Registrasi fuzzy error:", err);
     res.status(500).json({ error: "Terjadi kesalahan saat registrasi fuzzy" });
   }
-};    
+};
+
+    
 
 exports.getSaranWilayah = async (req, res) => {
   const { provinsi, kabupaten, kecamatan, desa } = req.body;
@@ -248,40 +300,56 @@ exports.getAllSumur = async (req, res) => {
   }
 };
 
+// Update data berdasarkan _id Mongo
 exports.updateSumur = async (req, res) => {
-  const { id } = req.params;
-  const { nama_perusahaan, provinsi, kabupaten, kecamatan, desa, jenis, status } = req.body;
-
   try {
-    const sumur = await Sumur.findById(id);
-    if (!sumur) return res.status(404).json({ error: "Data sumur tidak ditemukan" });
+    const { id } = req.params;
+    const updateData = req.body;
 
-    // Update field-field yang diizinkan
-    sumur.nama_perusahaan = nama_perusahaan || sumur.nama_perusahaan;
-    sumur.provinsi = provinsi || sumur.provinsi;
-    sumur.kabupaten = kabupaten || sumur.kabupaten;
-    sumur.kecamatan = kecamatan || sumur.kecamatan;
-    sumur.desa = desa || sumur.desa;
-    sumur.jenis = jenis !== undefined ? jenis : sumur.jenis;
-    sumur.status = status || sumur.status;
+    const updated = await Sumur.findByIdAndUpdate(id, updateData, { new: true });
 
-    await sumur.save();
+    if (!updated) {
+      return res.status(404).json({ message: "Data tidak ditemukan di MongoDB" });
+    }
 
-    res.json({ message: "Data berhasil diperbarui", data: sumur });
+    // kalau ada id_perusahaan, update juga di Sheet
+    if (updated.id_perusahaan) {
+      try {
+        await updateGoogleSheetsById(updated.id_perusahaan, updated.toObject());
+      } catch (err) {
+        console.error("❌ Gagal update Google Sheets:", err.message);
+      }
+    }
+
+    res.json({ message: "Data berhasil diupdate", data: updated });
   } catch (err) {
-    console.error("Gagal update sumur:", err);
-    res.status(500).json({ error: "Terjadi kesalahan saat update" });
+    console.error("❌ Error update data:", err.message);
+    res.status(500).json({ error: err.message });
   }
 };
 
+// Hapus data berdasarkan _id Mongo
 exports.deleteSumur = async (req, res) => {
   try {
     const { id } = req.params;
+
     const deleted = await Sumur.findByIdAndDelete(id);
-    if (!deleted) return res.status(404).json({ error: "Data tidak ditemukan" });
-    res.json({ success: true });
+    if (!deleted) {
+      return res.status(404).json({ message: "Data tidak ditemukan di MongoDB" });
+    }
+
+    // kalau ada id_perusahaan, hapus juga dari Sheet
+    if (deleted.id_perusahaan) {
+      try {
+        await deleteGoogleSheetsById(deleted.id_perusahaan);
+      } catch (err) {
+        console.error("❌ Gagal hapus di Google Sheets:", err.message);
+      }
+    }
+
+    res.json({ message: "Data berhasil dihapus", data: deleted });
   } catch (err) {
-    console.error("Gagal hapus:", err);
-    res.status(500).json({ error: "Gagal menghapus data" });
+    console.error("❌ Error hapus data:", err.message);
+    res.status(500).json({ error: err.message });
   }
 };
