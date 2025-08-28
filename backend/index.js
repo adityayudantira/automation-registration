@@ -30,6 +30,8 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.use(express.json()); // <--- penting
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/auth", authRoutes);
