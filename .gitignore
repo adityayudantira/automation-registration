@@ -32,3 +32,7 @@ dist-ssr
 backend/credentials.json
 registrasi-sumur-*.json
 backend/.env
+
+# Allow frontend build output
+!dist/spa
+!dist/spa/**
