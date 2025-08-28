@@ -12,30 +12,32 @@ dotenv.config();
 
 const app = express();
 
-const allowedOrigins = [
-  "https://automation-registration.vercel.app",
-  "https://automation-registration-zwda.vercel.app",
-  "https://automation-registration-wqop.vercel.app",
-  "http://localhost:5173"
-];
-
+// ✅ CORS Dinamis
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin (mobile apps, curl, etc.)
+      // izinkan request tanpa origin (misalnya curl/postman)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+
+      // izinkan localhost
+      if (origin.startsWith("http://localhost")) {
         return callback(null, true);
-      } else {
-        return callback(new Error("Not allowed by CORS"));
       }
+
+      // izinkan semua subdomain vercel.app
+      if (/^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      // kalau tidak match → tolak
+      return callback(new Error("Not allowed by CORS: " + origin));
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
-app.use(express.json()); // <--- penting
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
@@ -46,7 +48,7 @@ app.use("/api/registrasi", registrasiRoutes);
 // Middleware error handler
 app.use(handleMongoDuplicateKeyError);
 
-// MongoDB connection (keep-alive, no app.listen)
+// MongoDB connection
 let isConnected = false;
 async function connectDB() {
   if (isConnected) return;
