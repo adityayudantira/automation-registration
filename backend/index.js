@@ -12,8 +12,24 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = [
+  "http://localhost:5173",
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // untuk Postman / curl
+    if (
+      allowedOrigins.includes(origin) ||
+      /\.vercel\.app$/.test(origin) // semua domain vercel.app
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS: " + origin));
+    }
+  },
+  credentials: true,
+}));
 
 // Routes
 app.use("/api/auth", authRoutes);
