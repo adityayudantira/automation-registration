@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: automation-registration-backend
+    env: node
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        value: mongodb+srv://groundwater:co9xVkI7BO9prayk@cluster0.tvcs3lk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - key: JWT_SECRET
+        value: supersecretkey
