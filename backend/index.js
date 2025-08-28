@@ -37,5 +37,7 @@ async function connectDB() {
 }
 connectDB();
 
+console.log("MONGO_URI (sanitized):", process.env.MONGO_URI?.replace(/\/\/.*@/, "//<hidden>@"));
+
 // ✅ Export Express app
 export default app;
