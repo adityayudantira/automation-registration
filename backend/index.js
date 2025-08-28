@@ -17,11 +17,11 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // untuk Postman / curl
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
     if (
       allowedOrigins.includes(origin) ||
-      /\.vercel\.app$/.test(origin) // semua domain vercel.app
+      origin.endsWith(".vercel.app")   // <- lebih aman
     ) {
       callback(null, true);
     } else {
@@ -30,6 +30,9 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+app.options("*", cors());
+
 app.use(express.json()); // <--- penting
 app.use(express.urlencoded({ extended: true }));
 
