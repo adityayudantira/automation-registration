@@ -14,14 +14,16 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "https://automation-registration.vercel.app", // frontend utama
+  "https://automation-registration-zwda.vercel.app", // jika ada preview
 ];
 
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (
       allowedOrigins.includes(origin) ||
-      origin.endsWith(".vercel.app")   // <- lebih aman
+      /\.vercel\.app$/.test(origin)
     ) {
       callback(null, true);
     } else {
