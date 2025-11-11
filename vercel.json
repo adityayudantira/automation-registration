@@ -1,24 +1,12 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "backend/api/index.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist/spa" }
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://automation-registration-wqop.vercel.app/api/$1" }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "backend/api/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/spa/$1"
-    }
+    { "src": "/(.*)", "dest": "/dist/spa/index.html" }
+  ],
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist/spa" } }
   ]
 }
