@@ -2,11 +2,5 @@
   "version": 2,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://automation-registration-wqop.vercel.app/api/$1" }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "/dist/spa/index.html" }
-  ],
-  "builds": [
-    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist/spa" } }
   ]
 }
